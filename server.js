@@ -1,11 +1,11 @@
 /*********************************************************************************
- *  WEB322 – Assignment 03
+ *  WEB322 – Assignment 05
  *  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part *  of this assignment has been copied manually or electronically from any other source 
  *  (including 3rd party web sites) or distributed to other students.
  * 
- *  Name: Eshban Artemas Student ID: 15769218 Date: 02-18-2023
+ *  Name: Eshban Artemas Student ID: 15769218 Date: 03-10-2023
  *
- *  Online (Cyclic) Link: https://rich-blue-chiton-fez.cyclic.app/about
+ *  Online (Cyclic) Link: https://tough-chicken.cyclic.app/blog
  ********************************************************************************/
 
 const express = require('express');
@@ -56,6 +56,12 @@ app.engine('.hbs', exphbs.engine({
             } else {
                 return options.fn(this);
             }
+        },
+        formatDate: (dateObj) => {
+            let year = dateObj.getFullYear();
+            let month = (dateObj.getMonth() + 1).toString();
+            let day = dateObj.getDate().toString();
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
         }
 
     }
@@ -72,12 +78,12 @@ app.use(function(req, res, next) {
 
 app.set('view engine', '.hbs');
 
-
+app.use(express.urlencoded({ extended: true }));
 
 
 
 function onHttpStart() {
-    console.log("Express http server listening on:  " + HTTP_PORT);
+    console.log("Server Start ! http server listening on:  " + HTTP_PORT);
 }
 
 app.use(express.static('public'));
@@ -178,15 +184,34 @@ app.get("/posts", (req, res) => {
         })
     }
 });
-app.get("/posts/add", (req, res) => {
-    res.render(path.join(__dirname + "/views/addPost.hbs"));
+
+app.get('/posts/add', (req, res) => {
+
+    blogService.getCategories()
+        .then(data => res.render("addPost", { categories: data }))
+        .catch(err => {
+            res.render("addPost", { categories: [] })
+            console.log(err);
+        });
+
 });
+
 app.get('/posts/:id', (req, res) => {
     blogService.getPostById(req.params.id).then((data) => {
         res.send(data);
     }).catch((err) => {
         res.send("No Result Found");
     })
+});
+
+app.get("/posts/delete/:id", (req, res) => {
+    blogService.deletePostById(req.params.id)
+        .then(() => {
+            res.redirect("/posts");
+        }).catch(err => {
+            res.status(500).send("Unable to Remove Post / Post not found");
+            console.log(err);
+        });
 });
 
 
@@ -201,6 +226,28 @@ app.get("/categories", (req, res) => {
             res.render("categories", { message: "no results" });
         }
     })
+});
+
+
+app.get("/categories/add", (req, res) => {
+    res.render(path.join(__dirname, "/views/addCategory.hbs"));
+});
+
+
+app.post("/categories/add", (req, res) => {
+    blogService.addCategory(req.body).then(() => {
+        res.redirect("/categories");
+    })
+});
+
+app.get("/categories/delete/:id", (req, res) => {
+    blogService.deleteCategoryById(req.params.id)
+        .then(() => {
+            res.redirect("/categories");
+        }).catch(err => {
+            res.status(500).send("Unable to Remove Category / Category not found");
+            console.log(err);
+        });
 });
 
 // -------------------Add Posts--------------------------------------------
