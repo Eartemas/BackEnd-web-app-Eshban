@@ -3,7 +3,7 @@
  *  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part *  of this assignment has been copied manually or electronically from any other source 
  *  (including 3rd party web sites) or distributed to other students.
  * 
- *  Name: Eshban Artemas Student ID: 15769218 Date: 03-10-2023
+ *  Name: Eshban Artemas Student ID: 15769218 Date: 24/3/2023
  *
  *  Online (Cyclic) Link: https://tough-chicken.cyclic.app/blog
  ********************************************************************************/
@@ -14,11 +14,11 @@ const path = require("path");
 const exphbs = require('express-handlebars');
 const blogService = require("./blog-service");
 const stripJs = require('strip-js');
-
+var authData = require('./auth-service')
 const cloudinary = require('cloudinary').v2;
 const multer = require("multer");
 const streamifier = require('streamifier');
-
+const clientSessions = require("client-sessions");
 const HTTP_PORT = process.env.PORT || 8080;
 
 // Config
@@ -28,6 +28,26 @@ cloudinary.config({
     api_secret: "3dbjFYbmwgZ2PWI5zPyXrBmGm8c",
     secure: true,
 })
+
+app.use(clientSessions({
+    cookieName: "session",
+    secret: "week10example_web322",
+    duration: 2 * 60 * 1000,
+    activeDuration: 1000 * 60
+}));
+
+app.use(function(req, res, next) {
+    res.locals.session = req.session;
+    next();
+});
+
+function ensureLogin(req, res, next) {
+    if (!req.session.user) {
+        res.redirect("/login");
+    } else {
+        next();
+    }
+}
 
 const upload = multer(); // upload variable with no disk storage {storage:storage}
 
@@ -82,11 +102,55 @@ app.use(express.urlencoded({ extended: true }));
 
 
 
-function onHttpStart() {
-    console.log("Server Start ! http server listening on:  " + HTTP_PORT);
-}
 
 app.use(express.static('public'));
+
+// Login
+
+app.get("/login", (req, res) => {
+    res.render("login");
+});
+
+// Register
+
+app.get("/register", (req, res) => {
+    res.render("register");
+});
+
+app.post("/register", (req, res) => {
+    authData.registerUser(req.body)
+        .then(() => res.render("register", { successMessage: "User created" }))
+        .catch(err => res.render("register", { errorMessage: err, userName: req.body.userName }))
+});
+
+app.post("/login", (req, res) => {
+    req.body.userAgent = req.get('User-Agent');
+    authData.checkUser(req.body).then((user) => {
+        req.session.user = {
+            userName: user.userName,
+            email: user.email,
+            loginHistory: user.loginHistory
+        }
+        res.redirect('/posts');
+    }).catch((err) => {
+        res.render("login", { errorMessage: err, userName: req.body.userName });
+    });
+});
+
+// Logout
+
+app.get("/logout", (req, res) => {
+    req.session.reset();
+    res.redirect("/");
+});
+
+// Get User History
+
+app.get("/userHistory", ensureLogin, (req, res) => {
+    res.render("userHistory");
+});
+
+
 
 app.get('/', (req, res) => {
     res.redirect('/blog');
@@ -303,9 +367,13 @@ app.get("*", (req, res) => {
 
 
 //LISTEN
-blogService.initialize().then(() => {
-    app.listen(HTTP_PORT, onHttpStart);
 
-}).catch(() => {
-    console.log("error");
-});
+blogService.initialize()
+    .then(authData.initialize)
+    .then(function() {
+        app.listen(HTTP_PORT, function() {
+            console.log("app listening on: " + HTTP_PORT)
+        });
+    }).catch(function(err) {
+        console.log("unable to start server: " + err);
+    });
