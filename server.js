@@ -1,9 +1,9 @@
 /*********************************************************************************
- *  WEB322 – Assignment 05
+ *  WEB322 
  *  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part *  of this assignment has been copied manually or electronically from any other source 
  *  (including 3rd party web sites) or distributed to other students.
  * 
- *  Name: Eshban Artemas Student ID: 15769218 Date: 24/3/2023
+ *  Name: Eshban Artemas Date: 24/3/2023
  *
  *  Online (Cyclic) Link: https://tough-chicken.cyclic.app/blog
  ********************************************************************************/
